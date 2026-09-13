@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="luxury">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Harness — Mobile App Idea Research</title>
+
+  <!-- DaisyUI + Tailwind v4 (Lavish CDN fallback — no project design system found) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/daisyui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/themes.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>
+
+  <!-- Layout safety -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :where(.grid, .flex) > * { min-width: 0; }
+    :where(p, h1, h2, h3, h4, h5, li, td, th, .badge) { overflow-wrap: anywhere; }
+    :where(img, svg, video, canvas) { max-width: 100%; height: auto; }
+
+    body { padding: 0; margin: 0; }
+
+    .mermaid {
+      width: 100%;
+      min-height: 520px;
+    }
+
+    /* Subtle fade-in */
+    main { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  </style>
+
+  <!-- Mermaid — theme-aware, becomes Excalidraw whiteboard inside Lavish -->
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.esm.min.mjs";
+
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const paint = document.createElement("canvas").getContext("2d");
+
+    function toRgba(color) {
+      paint.clearRect(0, 0, 1, 1);
+      paint.fillStyle = "#000";
+      paint.fillStyle = color;
+      paint.fillRect(0, 0, 1, 1);
+      return paint.getImageData(0, 0, 1, 1).data;
+    }
+
+    function compositeRgba(fg, bg) {
+      const fa = fg[3] / 255, ba = bg[3] / 255;
+      const a = fa + ba * (1 - fa);
+      if (a === 0) return [0, 0, 0, 0];
+      return [
+        (fg[0]*fa + bg[0]*ba*(1-fa)) / a,
+        (fg[1]*fa + bg[1]*ba*(1-fa)) / a,
+        (fg[2]*fa + bg[2]*ba*(1-fa)) / a,
+        a * 255,
+      ];
+    }
+
+    function pageIsDark() {
+      const root = document.documentElement;
+      const rb = toRgba(getComputedStyle(root).backgroundColor);
+      const bb = document.body ? toRgba(getComputedStyle(document.body).backgroundColor) : [0,0,0,0];
+      const [r,g,b,a] = compositeRgba(bb, rb);
+      if (a > 0) return (0.2126*r + 0.7152*g + 0.0722*b) / 255 < 0.5;
+      const cs = getComputedStyle(root).colorScheme;
+      if (cs.includes("dark") && !cs.includes("light")) return true;
+      if (cs.includes("light") && !cs.includes("dark")) return false;
+      return darkQuery.matches;
+    }
+
+    const diagrams = [...document.querySelectorAll(".mermaid")].map(el => ({ el, src: el.innerHTML }));
+    let applied, rendering = false, queued = false;
+    function queueRender() { queued = true; if (!rendering) void render(); }
+    async function render() {
+      rendering = true;
+      try {
+        while (queued) {
+          queued = false;
+          const theme = pageIsDark() ? "dark" : "default";
+          if (theme === applied) continue;
+          mermaid.initialize({ startOnLoad: false, theme, securityLevel: "strict" });
+          for (const { el, src } of diagrams) { el.removeAttribute("data-processed"); el.innerHTML = src; }
+          try { await mermaid.run({ nodes: diagrams.map(d => d.el) }); }
+          catch (err) { console.error("Mermaid render failed:", err); return; }
+          applied = theme;
+        }
+      } finally {
+        rendering = false;
+        if (queued) queueRender();
+      }
+    }
+
+    if (document.readyState === "complete") queueRender();
+    else window.addEventListener("load", queueRender, { once: true });
+    const obs = new MutationObserver(queueRender);
+    for (const el of [document.documentElement, document.body]) {
+      if (el) obs.observe(el, { attributes: true, attributeFilter: ["data-theme","class","style"] });
+    }
+    document.addEventListener("change", queueRender, true);
+    document.addEventListener("transitionend", ({ propertyName }) => {
+      if (propertyName === "background-color") queueRender();
+    }, true);
+    darkQuery.addEventListener("change", queueRender);
+  </script>
+</head>
+<body class="bg-base-100 text-base-content min-h-screen">
+
+  <!-- Navbar -->
+  <div class="navbar bg-base-200 border-b border-base-content/10 px-6">
+    <div class="navbar-start">
+      <span class="text-lg font-bold tracking-tight">Agent Harness</span>
+      <span class="badge badge-soft badge-accent ml-3">Mobile App Idea Research</span>
+    </div>
+    <div class="navbar-end gap-2">
+      <span class="badge badge-outline badge-sm">Editable Whiteboard</span>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-6xl px-6 py-8 space-y-8">
+
+    <!-- Header -->
+    <div class="space-y-1">
+      <h1 class="text-3xl font-bold">Mobile App Idea Research System</h1>
+      <p class="text-base-content/60 text-sm">
+        An agent harness that orchestrates parallel research agents to evaluate mobile app ideas —
+        covering market sizing, technical feasibility, user personas, competitors, and trend timing.
+        <strong class="text-base-content/80">Click the diagram below to open an editable Excalidraw whiteboard.</strong>
+      </p>
+    </div>
+
+    <!-- System overview stats -->
+    <div class="stats stats-vertical lg:stats-horizontal shadow w-full bg-base-200">
+      <div class="stat">
+        <div class="stat-title">Research Agents</div>
+        <div class="stat-value text-primary">5</div>
+        <div class="stat-desc">Running in parallel</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Tool Integrations</div>
+        <div class="stat-value text-secondary">6</div>
+        <div class="stat-desc">Web, stores, APIs, LLM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-title">Output</div>
+        <div class="stat-value text-accent">1</div>
+        <div class="stat-desc">Synthesised research report</div>
+      </div>
+    </div>
+
+    <!-- Mermaid whiteboard (Lavish converts this to Excalidraw) -->
+    <div class="card card-border bg-base-100">
+      <div class="card-body p-4">
+        <h2 class="card-title text-base mb-3">
+          System Architecture
+          <span class="badge badge-soft badge-info text-xs font-normal">click to edit in whiteboard</span>
+        </h2>
+
+        <div class="mermaid">
+flowchart TD
+    User(["👤 User\nMobile App Idea"])
+
+    subgraph Harness["🔧 Agent Harness (Orchestration Layer)"]
+        direction TB
+        Orch["Orchestrator Agent\n— decomposes idea into research tasks\n— dispatches to sub-agents\n— tracks progress"]
+        TaskQ[("Task Queue\n(parallel dispatch)")]
+        Mem[("Memory &\nContext Store\n— shared scratchpad\n— dedup & merge")]
+        Orch --> TaskQ
+        TaskQ -.->|"hydrate context"| Mem
+    end
+
+    User -->|"raw idea + constraints"| Orch
+
+    subgraph Agents["🤖 Research Agents (Parallel)"]
+        direction LR
+        Market["📈 Market\nResearch Agent\n— TAM / SAM sizing\n— monetisation signals"]
+        Tech["⚙️ Technical\nFeasibility Agent\n— stack requirements\n— build complexity"]
+        Persona["🧑‍🤝‍🧑 User Persona\nAgent\n— target segments\n— pain points"]
+        Comp["🔍 Competitor\nAnalysis Agent\n— existing apps\n— gaps & moats"]
+        Trend["📅 Trend &\nTiming Agent\n— search trends\n— news signals"]
+    end
+
+    TaskQ -->|"market task"| Market
+    TaskQ -->|"tech task"| Tech
+    TaskQ -->|"persona task"| Persona
+    TaskQ -->|"competitor task"| Comp
+    TaskQ -->|"trend task"| Trend
+
+    subgraph Tools["🛠️ Tools & External Sources"]
+        direction LR
+        Web["🌐 Web Search\n(Brave / SerpAPI)"]
+        Store["📱 App Store\nScraper\n(iOS + Android)"]
+        Social["📣 Social Signals\n(Reddit / X API)"]
+        News["📰 News &\nTrends API\n(Google Trends)"]
+        LLM["🧠 LLM\nSynthesis\n(Claude)"]
+        DB[("📚 Knowledge\nBase / RAG")]
+    end
+
+    Market --> Web & Store & LLM
+    Tech --> Web & LLM & DB
+    Persona --> Social & Web & LLM
+    Comp --> Store & Web & LLM
+    Trend --> News & Social & Web
+
+    Market -->|"findings"| Mem
+    Tech -->|"findings"| Mem
+    Persona -->|"findings"| Mem
+    Comp -->|"findings"| Mem
+    Trend -->|"findings"| Mem
+
+    Mem -->|"all findings"| Synth["📝 Synthesis Agent\n— scores idea\n— flags risks\n— recommends next steps"]
+    Synth --> Report["📊 Research Report\n(structured output)"]
+    Report --> User
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent detail cards -->
+    <div>
+      <h2 class="text-xl font-semibold mb-4">Agent Responsibilities</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">📈 Market Research</h3>
+            <p class="text-sm text-base-content/70">Sizes the addressable market, identifies monetisation models used by similar apps, and benchmarks revenue potential.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-primary text-xs">TAM / SAM</span>
+              <span class="badge badge-soft badge-primary text-xs">Monetisation</span>
+              <span class="badge badge-soft badge-primary text-xs">Revenue signals</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">⚙️ Technical Feasibility</h3>
+            <p class="text-sm text-base-content/70">Assesses tech stack requirements, third-party API dependencies, build complexity, and known engineering risks.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-secondary text-xs">Stack</span>
+              <span class="badge badge-soft badge-secondary text-xs">APIs needed</span>
+              <span class="badge badge-soft badge-secondary text-xs">Build effort</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">🧑‍🤝‍🧑 User Personas</h3>
+            <p class="text-sm text-base-content/70">Identifies target user segments from social signals and forum research, surfaces pain points and willingness-to-pay signals.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-accent text-xs">Segments</span>
+              <span class="badge badge-soft badge-accent text-xs">Pain points</span>
+              <span class="badge badge-soft badge-accent text-xs">WTP signals</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">🔍 Competitor Analysis</h3>
+            <p class="text-sm text-base-content/70">Scrapes App Store / Play Store for direct competitors, reviews their ratings and reviews, and maps feature gaps and moats.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-warning text-xs">Direct comps</span>
+              <span class="badge badge-soft badge-warning text-xs">Feature gaps</span>
+              <span class="badge badge-soft badge-warning text-xs">Moats</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">📅 Trend & Timing</h3>
+            <p class="text-sm text-base-content/70">Analyses Google Trends, social buzz, and recent news to gauge whether timing is early, peak, or saturated.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-info text-xs">Search trends</span>
+              <span class="badge badge-soft badge-info text-xs">Social buzz</span>
+              <span class="badge badge-soft badge-info text-xs">Timing verdict</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-border bg-base-100">
+          <div class="card-body">
+            <h3 class="card-title text-base">📝 Synthesis Agent</h3>
+            <p class="text-sm text-base-content/70">Merges all agent findings, scores the idea across dimensions, flags top risks, and recommends concrete next steps.</p>
+            <div class="card-actions mt-2 flex-wrap gap-1">
+              <span class="badge badge-soft badge-success text-xs">Idea score</span>
+              <span class="badge badge-soft badge-success text-xs">Risk flags</span>
+              <span class="badge badge-soft badge-success text-xs">Next steps</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Data flow summary -->
+    <div class="card card-border bg-base-200">
+      <div class="card-body">
+        <h2 class="card-title text-base">Data Flow</h2>
+        <ul class="steps steps-vertical lg:steps-horizontal w-full text-sm">
+          <li class="step step-primary">User submits idea + constraints</li>
+          <li class="step step-primary">Orchestrator decomposes into tasks</li>
+          <li class="step step-secondary">5 agents run in parallel</li>
+          <li class="step step-accent">Findings merge into shared memory</li>
+          <li class="step step-success">Synthesis agent scores &amp; reports</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Open questions for review -->
+    <div class="card card-border bg-base-100">
+      <div class="card-body">
+        <h2 class="card-title text-base">
+          Open Questions
+          <span class="badge badge-soft badge-warning text-xs">annotate to resolve</span>
+        </h2>
+        <ul class="space-y-2 text-sm text-base-content/80">
+          <li class="flex gap-2 items-start">
+            <span class="badge badge-warning badge-xs mt-1 shrink-0">?</span>
+            Should agents run fully in parallel or with a dependency ordering (e.g. persona before market sizing)?
+          </li>
+          <li class="flex gap-2 items-start">
+            <span class="badge badge-warning badge-xs mt-1 shrink-0">?</span>
+            What is the timeout / retry policy for slow external APIs (App Store scraping, social APIs)?
+          </li>
+          <li class="flex gap-2 items-start">
+            <span class="badge badge-warning badge-xs mt-1 shrink-0">?</span>
+            Should the memory store persist across sessions (long-term knowledge base) or be ephemeral per idea?
+          </li>
+          <li class="flex gap-2 items-start">
+            <span class="badge badge-warning badge-xs mt-1 shrink-0">?</span>
+            How is deduplication handled when multiple agents surface the same competitor or source?
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="text-xs text-base-content/30 text-center pb-4">
+      Design source: Lavish CDN fallback (Tailwind v4 + DaisyUI v5) — no project design system found in this repo.
+    </p>
+
+  </main>
+</body>
+</html>
